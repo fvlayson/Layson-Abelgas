@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FZ A-Tracker</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+        body { display:flex; background:#f0f2f5; height:100vh; color:#1c1e21; overflow: hidden; }
+        .side { width:240px; background:#1c2833; color:white; padding:25px; flex-shrink: 0; }
+        .side a { color:#bdc3c7; text-decoration:none; display:block; padding:12px; border-radius:6px; margin-bottom:8px; }
+        .side a:hover { background:#34495e; color:white; }
+        .main-wrapper { flex: 1; overflow-y: auto; }
+        .main { padding: 30px; max-width: 1400px; margin: 0 auto; }
+        .header { display:flex; justify-content:space-between; margin-bottom:25px; background:white; padding:15px 25px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.05); }
+        #search { padding:10px; width:350px; border:1px solid #ddd; border-radius:8px; outline: none; }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:30px; }
+        .card { background:white; padding:20px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid #3498db; }
+        .card h3 { font-size: 0.8rem; color: #8d949e; text-transform: uppercase; margin-bottom: 5px; }
+        .card p { font-size: 1.8rem; font-weight: bold; }
+        .row { display:flex; gap:20px; margin-bottom:30px; flex-wrap: wrap; align-items: flex-start; }
+        .box { background:white; padding:20px; border-radius:12px; flex: 1; min-width: 300px; box-shadow:0 4px 6px rgba(0,0,0,0.05); }
+        h4 { margin-bottom:15px; font-size: 1rem; color: #1c1e21; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
+        input, select, button { width:100%; padding:10px; margin:6px 0; border:1px solid #ddd; border-radius:6px; font-size: 0.9rem; }
+        button { background:#3498db; color:white; border:none; cursor:pointer; font-weight:bold; }
+        table { width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.05); }
+        th, td { padding:18px; text-align:left; border-bottom:1px solid #f0f2f5; }
+        th { background: #f8f9fa; color: #8d949e; font-size: 0.85rem; text-transform: uppercase; }
+        .status-Excellent { color: #2ecc71; font-weight: bold; }
+        .status-Safe { color: #3498db; font-weight: bold; }
+        .status-Focus { color: #e74c3c; font-weight: bold; }
+        .pill { background:#e8f0fe; color: #1a73e8; padding:4px 10px; border-radius:20px; font-size:0.75rem; margin:3px; display:inline-block; font-weight: 500; }
+        .pill a { color: #e74c3c; text-decoration: none; margin-left: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="side">
+        <h1 style="font-size: 1.5rem; margin-bottom: 40px; color: #fff;">FZ Tracker</h1>
+        <a href="/">Dashboard</a>
+        <a href="/export">Export Data</a>
+    </div>
+    <div class="main-wrapper">
+        <div class="main">
+            <div class="header">
+                <input type="text" id="search" placeholder="Quick search..." onkeyup="searchFn()">
+                <div style="font-weight: 600;">Welcome, Student</div>
+            </div>
+            <div class="grid">
+                <div class="card"><h3>Total Subjects</h3><p>{{ count }}</p></div>
+                <div class="card" style="border-top-color:#2ecc71"><h3>Avg Grade</h3><p>{{ avg }}</p></div>
+                <div class="card" style="border-top-color:#f1c40f"><h3>Tasks</h3><p>{{ reminders|length }}</p></div>
+            </div>
+            <div class="row">
+                <div class="box">
+                    <h4>Log Assessment</h4>
+                    <form action="/log" method="POST">
+                        <input type="text" name="subject" placeholder="Subject Name" required>
+                        <select name="category">
+                            {% for cat in weights.keys() %}
+                            <option value="{{ cat }}">{{ cat|title }}</option>
+                            {% endfor %}
+                        </select>
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" step="0.1" name="earned" placeholder="Score">
+                            <input type="number" step="0.1" name="total" placeholder="Total">
+                        </div>
+                        <button type="submit">Log Score</button>
+                    </form>
+                </div>
+                <div class="box">
+                    <h4>Weights (%)</h4>
+                    <form action="/update_weights" method="POST">
+                        <div style="max-height: 140px; overflow-y: auto; padding-right: 10px;">
+                            {% for cat, val in weights.items() %}
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label style="font-size: 0.85rem;">{{ cat|title }}:</label>
+                                <input type="number" name="{{ cat }}" value="{{ (val * 100)|int }}" style="width: 60px; padding: 5px;">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" style="background:#8e44ad;">Update</button>
+                    </form>
+                </div>
+                <div class="box">
+                    <h4>Study Planner</h4>
+                    <form action="/add_task" method="POST">
+                        <input type="text" name="task" placeholder="Task" required>
+                        <input type="text" name="due" placeholder="Due (e.g. Apr 30)">
+                        <button type="submit" style="background:#27ae60">Add Task</button>
+                    </form>
+                    <div style="margin-top:10px; max-height:85px; overflow-y:auto;">
+                        {% for t in reminders %}
+                        <div style="font-size:0.85rem; border-bottom:1px solid #eee; padding:8px 0; display:flex; justify-content:space-between; align-items:center;">
+                            <span><strong>{{ t.task }}</strong> <br><small style="color:#7f8c8d;">Due: {{ t.due if t.due else 'TBD' }}</small></span>
+                            <a href="/del_task/{{ t.id }}" style="color:#e74c3c; text-decoration:none; font-weight:bold;">✕</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <table id="subTable">
+                <thead><tr><th>Subject</th><th>Grade</th><th>Trend</th><th>Status</th><th>History</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for s in subjects %}
+                    <tr>
+                        <td><strong>{{ s.name }}</strong></td>
+                        <td>{{ s.standing }}</td>
+                        <td>{{ s.trend }}</td>
+                        <td class="status-{{ s.status }}">{{ s.status }}</td>
+                        <td>
+                            {% for sc in s.scores %}
+                            <div class="pill">{{ sc.category[0]|upper }}: {{ sc.raw }} <a href="/del_score/{{ s.name }}/{{ sc.id }}">×</a></div>
+                            {% endfor %}
+                        </td>
+                        <td><a href="/del_sub/{{ s.name }}" style="color:#e74c3c; text-decoration:none; font-size:0.85rem; font-weight:600;">Remove</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function searchFn() {
+            let filter = document.getElementById("search").value.toUpperCase();
+            let rows = document.querySelectorAll("#subTable tbody tr");
+            rows.forEach(row => {
+                row.style.display = row.innerText.toUpperCase().includes(filter) ? "" : "none";
+            });
+        }
+    </script>
+</body>
+</html>
