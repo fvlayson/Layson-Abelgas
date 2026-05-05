@@ -1,0 +1,147 @@
+import json
+import os
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, send_file
+
+app = Flask(__name__)
+DATA_FILE = "fz_tracker_data.json"
+
+DEFAULT_WEIGHTS = {
+    "short quiz": 0.10, "homework": 0.05, "long quiz": 0.15,
+    "recitation": 0.05, "presentation": 0.15, "project": 0.20, "exam": 0.30
+}
+
+user_db = {"subjects": {}, "reminders": [], "weights": DEFAULT_WEIGHTS}
+
+def save_data():
+    with open(DATA_FILE, 'w') as f:
+        json.dump(user_db, f, indent=4)
+
+def load_data():
+    global user_db
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                user_db = json.load(f)
+                if "weights" not in user_db: user_db["weights"] = DEFAULT_WEIGHTS
+        except: pass
+
+@app.route('/')
+def index():
+    load_data()
+    subject_list = []
+    all_grades = []
+    w_map = user_db["weights"]
+    
+    for name, data in user_db["subjects"].items():
+        if not data["scores"]: continue
+        
+        cat_scores = {}
+        for s in data["scores"]:
+            cat = s['category']
+            if cat not in cat_scores: cat_scores[cat] = []
+            cat_scores[cat].append(s['percent'])
+        
+        total_earned = 0
+        total_possible = 0
+        for cat, scores in cat_scores.items():
+            avg_in_cat = sum(scores) / len(scores)
+            weight = w_map.get(cat, 0)
+            total_earned += (avg_in_cat / 100) * weight
+            total_possible += weight
+            
+        standing = (total_earned / total_possible * 100) if total_possible > 0 else 0
+        standing = min(standing, 100.0)
+        all_grades.append(standing)
+        
+        # Trend Analysis
+        trend = "Stable"
+        if len(data["scores"]) >= 3:
+            y, x = [s['percent'] for s in data["scores"]], list(range(len(data["scores"])))
+            w = [w_map.get(s['category'], 0) for s in data["scores"]]
+            sw, swx, swy, swxx, swxy = sum(w), sum(wi*xi for wi,xi in zip(w,x)), sum(wi*yi for wi,yi in zip(w,y)), sum(wi*xi*xi for wi,xi in zip(w,x)), sum(wi*xi*yi for wi,xi,yi in zip(w,x,y))
+            den = (sw * swxx) - (swx ** 2)
+            slope = ((sw * swxy) - (swx * swy)) / den if den != 0 else 0
+            trend = "Rising" if slope > 0.5 else "Falling" if slope < -0.5 else "Stable"
+
+        subject_list.append({
+            "name": name, "standing": f"{standing:.1f}%", "trend": trend,
+            "status": "Excellent" if standing >= 90 else "Safe" if standing >= 75 else "Focus",
+            "scores": data["scores"]
+        })
+
+    avg = f"{sum(all_grades)/len(all_grades):.1f}%" if all_grades else "0.0%"
+    # count=len(subject_list) fixes the phantom subject count
+    return render_template('index.html', subjects=subject_list, reminders=user_db.get("reminders", []), 
+                           avg=avg, count=len(subject_list), weights=w_map)
+
+@app.route('/log', methods=['POST'])
+def log_score():
+    load_data()
+    sub, cat = request.form.get('subject').strip().title(), request.form.get('category')
+    e, t = float(request.form.get('earned') or 0), float(request.form.get('total') or 1)
+    if sub not in user_db["subjects"]: user_db["subjects"][sub] = {"scores": []}
+    user_db["subjects"][sub]["scores"].append({
+        "id": int(datetime.now().timestamp()), "category": cat, 
+        "raw": f"{e}/{t}", "percent": (e/t)*100
+    })
+    save_data(); return redirect(url_for('index'))
+
+@app.route('/add_task', methods=['POST'])
+def add_task():
+    load_data()
+    user_db["reminders"].append({
+        "id": int(datetime.now().timestamp()), "task": request.form.get('task'), "due": request.form.get('due') 
+    })
+    save_data(); return redirect(url_for('index'))
+
+@app.route('/del_task/<int:tid>')
+def del_task(tid):
+    load_data()
+    user_db["reminders"] = [t for t in user_db["reminders"] if t["id"] != tid]
+    save_data(); return redirect(url_for('index'))
+
+@app.route('/update_weights', methods=['POST'])
+def update_weights():
+    load_data()
+    for cat in user_db["weights"]:
+        user_db["weights"][cat] = float(request.form.get(cat) or 0) / 100
+    save_data(); return redirect(url_for('index'))
+
+@app.route('/del_sub/<name>')
+def del_sub(name):
+    load_data()
+    if name in user_db["subjects"]:
+        del user_db["subjects"][name]
+        save_data()
+    return redirect(url_for('index'))
+
+@app.route('/del_score/<sub_name>/<int:sid>')
+def del_score(sub_name, sid):
+    load_data()
+    if sub_name in user_db["subjects"]:
+        user_db["subjects"][sub_name]["scores"] = [s for s in user_db["subjects"][sub_name]["scores"] if s["id"] != sid]
+        save_data(); return redirect(url_for('index'))
+
+@app.route('/export')
+def export():
+    load_data()
+    path = "Academic_Report.txt"
+    with open(path, "w") as f:
+        f.write("FZ A-TRACKER REPORT\n" + "="*20 + "\n")
+        w_map = user_db["weights"]
+        for name, d in user_db["subjects"].items():
+            if not d["scores"]: continue
+            cat_scores = {}
+            for s in d["scores"]:
+                cat = s['category']
+                if cat not in cat_scores: cat_scores[cat] = []
+                cat_scores[cat].append(s['percent'])
+            total_earned = sum((sum(scores)/len(scores)/100) * w_map.get(cat,0) for cat, scores in cat_scores.items())
+            total_possible = sum(w_map.get(cat,0) for cat in cat_scores.keys())
+            standing = (total_earned / total_possible * 100) if total_possible > 0 else 0
+            f.write(f"{name}: {standing:.2f}%\n")
+    return send_file(path, as_attachment=True)
+
+if __name__ == "__main__":
+    app.run(debug=True)
