@@ -1,0 +1,23 @@
+1.) the project utilizes computational thinking to transform a behavioral problem, like procrastination into a structured logical solution. While the problem definition identifies a tendency to wait until the day before a deadline, the FZ A-Tracker solves this by applying decomposition, breaking down the overwhelming final grade into small, weighted categories like quizzes and homework to make tasks feel less intimidating.
+
+2.)  a. We address the "human factor" of quality by using the earned percentage as a computational proxy for output quality, turning subjective effort into objective data.
+
+b. The system handles arbitrary grading scales between different subjects by implementing a customizable weighting dictionary that adjusts the logic for every specific course requirement.
+
+c. To move beyond simple task identification, the program uses a feedback loop of status badges (Excellent, Safe, or Focus), which nudges the user to balance their academic load with extracurricular activities more effectively.
+
+3.) a. The system sorts activities by weighted priority, where tasks like "Exams" or "Projects" are ranked higher in the dashboard because the Python backend calculates their larger impact on the final grade percentage.
+
+b. Prior to sorting, the system performs the initial step of data normalization, converting various raw scores (e.g., 15/20 or 90/100) into a standard 100% scale to ensure all activities are compared fairly.
+
+c. As a wrap-up activity, the system generates a Trend Analysis Report, which summarizes whether the sorted efforts resulted in an upward "Rising" or downward "Falling" performance trajectory.
+
+d. The sequential steps for managing time within the system are: first, Identify (inputting the task and weight); second, Prioritize (sorting by grade impact); third, Monitor (checking the status badge); and finally, Execute (completing the task before the deadline).
+
+e. The Python system solves the problem of time management by replacing subjective "guessing" with an automated ranking system, ensuring students spend their limited time on the activities that mathematically matter most to their academic success.
+
+4.) The program solves the need for structured data by mapping academic variables into specific technical types, such as Strings for subjects, Numeric timestamps for due dates, and Time Data for tracking activity completion.
+
+5.) a. Error, should've been a Parallelogram 
+
+b. the label for the final decision diamond could be improved to "Add another activity?" to clearly describe that the current task is finished and the system is prompting the user to start a new cycle or end the process.
