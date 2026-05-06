@@ -1,0 +1,6 @@
+Abelgas Zirk’s Reflection:
+I focused primarily on the technical architecture and the backend development of the FZ A-Tracker. I was responsible for coding the entire Flask application, which involved creating the routes for each CRUD operation and ensuring that the JSON-based database could handle data persistence without errors. A significant portion of his effort went into the mathematical logic of the system, specifically implementing the weighted linear regression algorithm that calculates performance trends and the dynamic formula that determines a student's standing based on customizable weights.
+
+Layson’s Reflection:
+ For my own reflection, I took the lead on the conceptual design, methodology, and the communication of our project’s value through the presentation. My goal was to translate the code into a clear narrative by applying the four pillars of computational thinking, decomposition, pattern recognition, abstraction, and algorithms to prove that our system could solve behavioral issues like procrastination. I spent my time refining our problem statements and addressing specific feedback regarding our process flow and data representation to ensure every flowchart and description was logically sound.
+
